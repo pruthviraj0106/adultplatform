@@ -215,11 +215,11 @@ const VideoCollection = () => {
       {/* Footer */}
       <footer className="bg-gray-900 py-8 px-4 md:px-8 lg:px-16">
         <div className="flex flex-wrap justify-center gap-6 mb-6 text-sm text-gray-400">
-          <a href="#" className="hover:text-purple-400 transition-colors">Terms of Service</a>
-          <a href="#" className="hover:text-purple-400 transition-colors">Privacy Policy</a>
-          <a href="#" className="hover:text-purple-400 transition-colors">Support</a>
-          <a href="#" className="hover:text-purple-400 transition-colors">DMCA</a>
-          <a href="#" className="hover:text-purple-400 transition-colors">2257 Statement</a>
+          <Link to="/terms" className="hover:text-purple-400 transition-colors">Terms of Service</Link>
+          <Link to="/privacy" className="hover:text-purple-400 transition-colors">Privacy Policy</Link>
+          <Link to="/support" className="hover:text-purple-400 transition-colors">Support</Link>
+          <Link to="/dmca" className="hover:text-purple-400 transition-colors">DMCA</Link>
+          <Link to="/2257" className="hover:text-purple-400 transition-colors">2257 Statement</Link>
         </div>
         <div className="text-center text-gray-500 text-sm">
           © 2025 Adult Content Platform. All rights reserved.
