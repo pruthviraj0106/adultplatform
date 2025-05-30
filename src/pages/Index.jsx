@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../components/ui/button';
 import { Link } from 'react-router-dom';
+import Navigation from '../components/Navigation';
 
 const Index = () => {
   const contentItems = [
@@ -144,26 +145,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Navigation Bar */}
-      <nav className="bg-gray-900 px-4 md:px-8 lg:px-16 py-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-pink-600">
-            Adult Content Platform
-          </h1>
-          <div className="flex gap-4">
-            <Link to="/login">
-            <Button variant="outline" className="border-green-500 text-gray-900 hover:bg-green-500 hover:text-white">
-              Login
-            </Button>
-            </Link>
-            <Link to="/signup">
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-              Sign Up
-            </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Header */}
       <header className="py-8 text-center">
