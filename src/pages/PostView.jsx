@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { Button } from '../components/ui/button.tsx';
 import Navigation from '../components/Navigation';
 import { Lock, Play, AlertTriangle } from 'lucide-react';
 
@@ -13,19 +13,19 @@ const PostView = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
-    // TODO: Replace with actual API call
     const fetchPost = async () => {
       try {
         setIsLoading(true);
-        // Simulate API call
-        const response = await fetch(`/api/content/${id}`);
+        const response = await fetch(`http://localhost:8080/posts/${id}`);
         if (!response.ok) throw new Error('Post not found');
         const data = await response.json();
-        setPost(data);
+        
+        // Use backend-provided thumbnail_url and video_url for the post
+        setPost(data.post);
         
         // Check if user is subscribed to this tier
         const userSubscription = localStorage.getItem('userSubscription');
-        setIsSubscribed(userSubscription === data.tier);
+        setIsSubscribed(userSubscription === data.post.tier);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -34,10 +34,15 @@ const PostView = () => {
     };
 
     fetchPost();
+
+    // Cleanup function to revoke blob URLs
+    return () => {
+      if (post?.thumbnail) URL.revokeObjectURL(post.thumbnail);
+      if (post?.video_url) URL.revokeObjectURL(post.video_url);
+    };
   }, [id]);
 
   const handleSubscribe = () => {
-    // TODO: Implement subscription logic
     navigate('/subscription', { state: { tier: post.tier } });
   };
 
@@ -84,90 +89,44 @@ const PostView = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       <Navigation />
-      
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Post Header */}
-        <div className="mb-8">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
-          <div className="flex items-center gap-4 text-sm text-gray-400">
-            <span className={`px-3 py-1 rounded-full ${
-              post.tier === 'BASIC' ? 'bg-blue-600' :
-              post.tier === 'MEDIUM' ? 'bg-orange-600' :
-              'bg-red-600'
-            }`}>
-              {post.tier}
-            </span>
-            <span>{post.price}</span>
-          </div>
-        </div>
+          <p className="text-gray-400 mb-8">{post.description}</p>
 
-        {/* Post Content */}
-        <div className="bg-gray-800 rounded-lg overflow-hidden mb-8">
-          {post.type === 'Video' ? (
-            isSubscribed ? (
-              <video
-                src={post.videoUrl}
-                controls
-                className="w-full aspect-video"
-                poster={post.imageUrl}
-              />
-            ) : (
-              <div className="relative aspect-video">
-                <img
-                  src={post.imageUrl}
-                  alt={post.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <Lock className="w-12 h-12 text-pink-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold mb-2">Premium Content</h3>
-                    <p className="text-gray-300 mb-4">
-                      Subscribe to {post.tier} tier to watch this video
-                    </p>
-                    <Button
-                      onClick={handleSubscribe}
-                      className="bg-pink-600 hover:bg-pink-700"
-                    >
-                      Subscribe Now
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )
-          ) : (
-            <img
-              src={post.imageUrl}
-              alt={post.title}
-              className="w-full h-auto"
-            />
-          )}
-        </div>
-
-        {/* Post Description */}
-        <div className="prose prose-invert max-w-none">
-          <p className="text-gray-300 leading-relaxed">{post.description}</p>
-        </div>
-
-        {/* Subscription CTA */}
-        {!isSubscribed && (
-          <div className="mt-8 p-6 bg-gray-800 rounded-lg border border-pink-500">
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold mb-2">Want to see more?</h3>
-                <p className="text-gray-300">
-                  Subscribe to {post.tier} tier to access this and more premium content.
-                </p>
-              </div>
+          {!isSubscribed ? (
+            <div className="bg-gray-800 rounded-lg p-6 text-center">
+              <Lock className="w-12 h-12 text-pink-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Premium Content</h2>
+              <p className="text-gray-400 mb-4">
+                Subscribe to access this {post.type.toLowerCase()}
+              </p>
               <Button
                 onClick={handleSubscribe}
-                className="bg-pink-600 hover:bg-pink-700 whitespace-nowrap"
+                className="bg-pink-500 hover:bg-pink-600 text-white"
               >
                 Subscribe Now
               </Button>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="bg-gray-800 rounded-lg overflow-hidden">
+              {post.type === 'Video' ? (
+                <video
+                  src={`http://localhost:8080${post.video_url}`}
+                  controls
+                  className="w-full"
+                  autoPlay
+                />
+              ) : (
+                <img
+                  src={`http://localhost:8080${post.thumbnail_url}`}
+                  alt={post.title}
+                  className="w-full"
+                />
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -3,12 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button.tsx';
 import Navigation from '../components/Navigation';
 import { Play, ArrowLeft, X } from 'lucide-react';
-import { useUser } from '../context/UserContext.jsx';
 
 const VideoCollection = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useUser();
   const [collection, setCollection] = useState(null);
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -16,37 +14,13 @@ const VideoCollection = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
 
-  const getTierLevel = (tier) => {
-    switch (tier) {
-      case 'BASIC':
-        return 1;
-      case 'MEDIUM':
-        return 2;
-      case 'HARDCORE':
-        return 3;
-      default:
-        return 0;
-    }
-  };
-
-  const checkTierAccess = (collectionTier) => {
-    if (!user || !user.subscription_tier) {
-      return collectionTier === 'BASIC';
-    }
-    return getTierLevel(user.subscription_tier) >= getTierLevel(collectionTier);
-  };
-
-  const getFullUrl = (path) => {
-    if (!path) return '';
-    return `http://localhost:8080${path}`;
-  };
-
   useEffect(() => {
     const fetchCollectionData = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
+        // Fetch collection and its posts
         const response = await fetch(`http://localhost:8080/collections/${id}/posts`);
         const data = await response.json();
 
@@ -54,8 +28,24 @@ const VideoCollection = () => {
           throw new Error(data.message || 'Failed to fetch collection data');
         }
 
-        setCollection(data.collection);
-        setPosts(data.posts);
+        // Create blob URLs for collection thumbnail
+        const collectionWithUrl = {
+          ...data.collection,
+          thumbnail: data.collection.thumbnail_data ? 
+            URL.createObjectURL(new Blob([data.collection.thumbnail_data], { type: 'image/jpeg' })) : null
+        };
+
+        // Create blob URLs for posts
+        const postsWithUrls = data.posts.map(post => ({
+          ...post,
+          thumbnail: post.thumbnail_data ? 
+            URL.createObjectURL(new Blob([post.thumbnail_data], { type: 'image/jpeg' })) : null,
+          video_url: post.video_data ? 
+            URL.createObjectURL(new Blob([post.video_data], { type: 'video/mp4' })) : null
+        }));
+
+        setCollection(collectionWithUrl);
+        setPosts(postsWithUrls);
       } catch (err) {
         setError('Failed to load collection: ' + err.message);
         console.error('Error fetching collection:', err);
@@ -66,7 +56,14 @@ const VideoCollection = () => {
 
     fetchCollectionData();
 
-    // No need to revoke object URLs since we use direct URLs now
+    // Cleanup function to revoke blob URLs
+    return () => {
+      if (collection?.thumbnail) URL.revokeObjectURL(collection.thumbnail);
+      posts.forEach(post => {
+        if (post.thumbnail) URL.revokeObjectURL(post.thumbnail);
+        if (post.video_url) URL.revokeObjectURL(post.video_url);
+      });
+    };
   }, [id]);
 
   const handlePostClick = (post) => {
@@ -116,19 +113,6 @@ const VideoCollection = () => {
     }
   };
 
-  const getContentColor = (tier) => {
-    switch (tier) {
-      case 'BASIC':
-        return 'text-blue-400';
-      case 'MEDIUM':
-        return 'text-orange-400';
-      case 'HARDCORE':
-        return 'text-red-400';
-      default:
-        return 'text-gray-400';
-    }
-  };
-
   return (
     <div className="min-h-screen bg-black text-white">
       <Navigation />
@@ -154,7 +138,7 @@ const VideoCollection = () => {
             <div key={post.id} className="bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer group" onClick={() => handlePostClick(post)}>
               <div className="relative">
                 <img
-                  src={getFullUrl(post.thumbnail_url)}
+                  src={post.thumbnail}
                   alt={post.title}
                   className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                 />
@@ -183,14 +167,14 @@ const VideoCollection = () => {
             </button>
             {selectedPost.type === 'Video' ? (
               <video
-                src={getFullUrl(selectedPost.video_url)}
+                src={selectedPost.video_url}
                 controls
                 className="w-full rounded-lg"
                 autoPlay
               />
             ) : (
               <img
-                src={getFullUrl(selectedPost.thumbnail_url)}
+                src={selectedPost.thumbnail}
                 alt={selectedPost.title}
                 className="w-full rounded-lg"
               />
@@ -206,4 +190,4 @@ const VideoCollection = () => {
   );
 };
 
-export default VideoCollection;
+export default VideoCollection; 

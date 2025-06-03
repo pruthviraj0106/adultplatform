@@ -1,31 +1,22 @@
-import React, { useState, useCallback } from 'react';
-import { Button } from '../components/ui/button';
+import { useState, useCallback, useEffect } from 'react';
+import { Button } from '../components/ui/button.tsx';
 import Navigation from '../components/Navigation';
 import { Plus, Trash2, Edit, Upload, RefreshCw, AlertTriangle, Play } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext.jsx';
 
 const AdminDashboard = () => {
-  const [contentItems, setContentItems] = useState([
-    {
-      id: 1,
-      title: "Sensual Encounters Collection",
-      description: "Our entry-level collection featuring tasteful scenes and sensual content.",
-      price: "$9.99/month",
-      imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop&crop=face",
-      videoUrl: "",
-      tier: "BASIC",
-      type: "Video"
-    },
-    // ... other items
-  ]);
+  const [contentItems, setContentItems] = useState([]);
+  const [selectedCollection, setSelectedCollection] = useState(null);
+  const [collectionPosts, setCollectionPosts] = useState([]);
 
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({
     image: 0,
@@ -58,18 +49,67 @@ const AdminDashboard = () => {
   const [previewVideo, setPreviewVideo] = useState(null);
 
   const navigate = useNavigate();
+  const { login, user, logout } = useUser();
+
+  // Add/Edit modal type: 'collection', 'post', or 'photo'
+  const [modalType, setModalType] = useState('collection');
+
+  const getFullUrl = (path) => {
+    if (!path) return '';
+    return `http://localhost:8080${path}`;
+  };
 
   const loadFFmpeg = useCallback(async () => {
     try {
       await ffmpeg.load({
-        coreURL: await toBlobURL(`/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`/ffmpeg-core.wasm`, 'application/wasm'),
+        coreURL: await toBlobURL('/ffmpeg-core.js', 'text/javascript'),
+        wasmURL: await toBlobURL('/ffmpeg-core.wasm', 'application/wasm'),
       });
     } catch (error) {
       console.error('Error loading FFmpeg:', error);
       throw new Error('Failed to load video compression tools');
     }
   }, [ffmpeg]);
+
+  useEffect(() => {
+    // Check if user is admin
+    fetch('http://localhost:8080/checkauth', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success || !data.user?.isAdmin) {
+          // If not admin, redirect to home page
+          navigate('/');
+          logout();
+        } else {
+          login(data.user);
+        }
+      })
+      .catch(error => {
+        console.error('Auth check error:', error);
+        navigate('/');
+        logout();
+      });
+  }, []);
+
+  useEffect(() => {
+    const fetchCollections = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/collections');
+        const data = await response.json();
+        if (data.collection) {
+          // Use backend-provided thumbnail_url directly
+          setContentItems(data.collection);
+        }
+      } catch (error) {
+        console.error('Error fetching collections:', error);
+        setError('Failed to load collections');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCollections();
+  }, []);
 
   const compressVideo = async (file) => {
     try {
@@ -138,28 +178,20 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (postId) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Call backend API to delete the content
-      const response = await fetch(`/api/content/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Call backend API to delete the post
+      // TODO: Replace with actual API call
+      console.log('Simulating delete for post ID:', postId);
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
 
-      if (!response.ok) {
-        throw new Error('Failed to delete content from server');
-      }
-
-      // Only remove from state if backend deletion was successful
-      setContentItems(items => items.filter(item => item.id !== id));
+      // Remove post from the collection
+      setCollectionPosts(posts => posts.filter(post => post.id !== postId));
     } catch (err) {
-      setError('Failed to delete content: ' + err.message);
+      setError('Failed to delete post: ' + err.message);
       console.error('Delete error:', err);
     } finally {
       setIsLoading(false);
@@ -169,27 +201,107 @@ const AdminDashboard = () => {
   const handleEdit = (item) => {
     setIsEditing(true);
     setEditingId(item.id);
-    setNewContent({
-      title: item.title,
-      description: item.description,
-      price: item.price,
-      imageFile: null,
-      videoFile: null,
-      tier: item.tier,
-      type: item.type,
-      isCoverPage: item.isCoverPage
-    });
-    setPreviewImage(item.imageUrl);
-    setPreviewVideo(item.videoUrl);
+    if (selectedCollection) {
+      setModalType('post');
+      setNewContent({
+        title: item.title,
+        description: item.description,
+        price: '',
+        imageFile: null,
+        videoFile: null,
+        tier: selectedCollection?.tier || 'BASIC',
+        type: item.videoUrl ? 'Video' : 'Image',
+        isCoverPage: false
+      });
+      setPreviewImage(item.imageUrl);
+      setPreviewVideo(item.videoUrl);
+    } else {
+      setModalType('collection');
+      setNewContent({
+        title: item.title,
+        description: item.description,
+        price: item.price,
+        imageFile: null,
+        videoFile: null,
+        tier: item.tier,
+        type: 'Video',
+        isCoverPage: item.isCoverPage
+      });
+      setPreviewImage(item.imageUrl);
+      setPreviewVideo(item.videoUrl);
+    }
     setIsAddingNew(true);
   };
 
-  const handleAddNew = () => {
+  const handleAddNewCollection = () => {
     setIsAddingNew(true);
+    setIsEditing(false);
+    setEditingId(null);
+    setModalType('collection');
     setError(null);
     setUploadProgress({ image: 0, video: 0 });
     setCompressionProgress(0);
     setFailedUploads({ image: null, video: null });
+    setNewContent({
+      title: '',
+      description: '',
+      price: '',
+      imageFile: null,
+      videoFile: null,
+      tier: 'BASIC',
+      type: 'Video',
+      isCoverPage: false
+    });
+    setPreviewImage(null);
+    setPreviewVideo(null);
+  };
+
+  const handleAddNewPost = () => {
+    console.log('Opening Add New Post modal');
+    setIsAddingNew(true);
+    setIsEditing(false);
+    setEditingId(null);
+    setModalType('post');
+    setError(null);
+    setUploadProgress({ image: 0, video: 0 });
+    setCompressionProgress(0);
+    setFailedUploads({ image: null, video: null });
+    setNewContent({
+      title: '',
+      description: '',
+      price: '',
+      imageFile: null,
+      videoFile: null,
+      tier: selectedCollection?.tier || 'BASIC',
+      type: 'Video',
+      isCoverPage: false
+    });
+    setPreviewImage(null);
+    setPreviewVideo(null);
+  };
+
+  const handleAddNewPhoto = () => {
+    console.log('Opening Add New Photo modal');
+    setIsAddingNew(true);
+    setIsEditing(false);
+    setEditingId(null);
+    setModalType('photo');
+    setError(null);
+    setUploadProgress({ image: 0, video: 0 });
+    setCompressionProgress(0);
+    setFailedUploads({ image: null, video: null });
+    setNewContent({
+      title: '',
+      description: '',
+      price: '',
+      imageFile: null,
+      videoFile: null,
+      tier: selectedCollection?.tier || 'BASIC',
+      type: 'Image',
+      isCoverPage: false
+    });
+    setPreviewImage(null);
+    setPreviewVideo(null);
   };
 
   const handleNewContentChange = (e) => {
@@ -227,7 +339,7 @@ const AdminDashboard = () => {
         setNewContent(prev => ({ ...prev, videoFile: compressedFile }));
         const reader = new FileReader();
         reader.onloadend = () => {
-          setPreviewVideo(reader.result);
+          setPreviewVideo(reader.result); // Use compressed video for preview
         };
         reader.readAsDataURL(compressedFile);
       }
@@ -247,7 +359,7 @@ const AdminDashboard = () => {
         
         if (type === 'image') {
           // Compress image before upload
-          processedFile = await compressImage(file);
+          processedFile = await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true }); // Add options here
           setNewContent(prev => ({ ...prev, imageFile: processedFile }));
           
           const reader = new FileReader();
@@ -258,17 +370,20 @@ const AdminDashboard = () => {
         } else if (type === 'video') {
           if (file.size > 100 * 1024 * 1024) { // 100MB
             setError(`Video is too large (${originalSize}). Compressing...`);
+            // Note: compressVideo already handles FFmpeg loading and compression logic
             processedFile = await compressVideo(file);
             setNewContent(prev => ({ ...prev, videoFile: processedFile }));
           } else {
             setNewContent(prev => ({ ...prev, videoFile: file }));
+             // For videos under 100MB, still create a preview URL
+            const reader = new FileReader();
+             reader.onloadend = () => {
+               setPreviewVideo(reader.result);
+             };
+             reader.readAsDataURL(file); // Read the original file for preview
           }
           
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setPreviewVideo(reader.result);
-          };
-          reader.readAsDataURL(processedFile);
+         
         }
         
         const compressedSize = formatFileSize(processedFile.size);
@@ -276,122 +391,110 @@ const AdminDashboard = () => {
           setError(`Video compressed from ${originalSize} to ${compressedSize}`);
         }
         
-        setError(null);
+        // Clear previous upload/compression errors for this file type
+        setFailedUploads(prev => ({ ...prev, [type]: null }));
+        setError(null); // Clear general error
       } catch (err) {
         setError(`Error processing ${type} file: ${err.message}`);
         console.error('File processing error:', err);
         setFailedUploads(prev => ({ ...prev, [type]: file }));
+        setNewContent(prev => ({ ...prev, [type + 'File']: null })); // Clear the file from state on error
+        setPreviewImage(type === 'image' ? null : previewImage); // Clear preview if image failed
+        setPreviewVideo(type === 'video' ? null : previewVideo); // Clear preview if video failed
       }
     }
   };
 
-  const handleSubmitNew = async (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setIsLoading(true);
       setError(null);
-      setUploadProgress({ image: 0, video: 0 });
 
-      // Validate that at least one media file is uploaded
-      if (!newContent.imageFile && !newContent.videoFile) {
-        throw new Error('Please upload either an image or a video');
+      // Validate required fields
+      if (!newContent.title) {
+        throw new Error('Title is required');
       }
 
-      // Create FormData object for multipart/form-data
+      if (modalType === 'post' || modalType === 'photo') {
+        if (!selectedCollection) {
+          throw new Error('No collection selected');
+        }
+        if (!newContent.imageFile) {
+          throw new Error('Thumbnail image is required');
+        }
+        if (modalType === 'post' && !newContent.videoFile) {
+          throw new Error('Video file is required for posts');
+        }
+      }
+
       const formData = new FormData();
-      formData.append('title', newContent.title);
-      formData.append('description', newContent.description);
-      formData.append('price', newContent.price);
-      formData.append('tier', newContent.tier);
-      formData.append('type', newContent.videoFile ? 'Video' : 'Image');
-      formData.append('isCoverPage', newContent.isCoverPage);
       
+      if (modalType === 'post' || modalType === 'photo') {
+        formData.append('collection_id', selectedCollection.id);
+      }
+      
+      formData.append('title', newContent.title);
+      formData.append('description', newContent.description || '');
+      formData.append('type', modalType === 'photo' ? 'Image' : newContent.type);
+
       if (newContent.imageFile) {
         formData.append('image', newContent.imageFile);
       }
-      if (newContent.videoFile) {
+
+      if (newContent.videoFile && (modalType === 'post' || newContent.type === 'Video')) {
         formData.append('video', newContent.videoFile);
       }
 
-      // Simulate API call with progress tracking
-      const simulateApiCall = async () => {
-        // Simulate file upload progress
-        if (newContent.imageFile) {
-          for (let i = 0; i <= 100; i += 10) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            setUploadProgress(prev => ({ ...prev, image: i }));
-          }
-        }
-        if (newContent.videoFile) {
-          for (let i = 0; i <= 100; i += 10) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            setUploadProgress(prev => ({ ...prev, video: i }));
-          }
-        }
+      // Debug log
+      console.log('Submitting form data:', {
+        collection_id: selectedCollection?.id,
+        title: newContent.title,
+        description: newContent.description,
+        type: modalType === 'photo' ? 'Image' : newContent.type,
+        hasImage: !!newContent.imageFile,
+        hasVideo: !!newContent.videoFile,
+        modalType
+      });
 
-        // Simulate API response
-        return {
-          id: Date.now(),
-          title: newContent.title,
-          description: newContent.description,
-          price: newContent.price,
-          tier: newContent.tier,
-          type: newContent.videoFile ? 'Video' : 'Image',
-          isCoverPage: newContent.isCoverPage,
-          imageUrl: newContent.imageFile ? URL.createObjectURL(newContent.imageFile) : null,
-          videoUrl: newContent.videoFile ? URL.createObjectURL(newContent.videoFile) : null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+      // Call backend API to create/update post
+      const response = await fetch('http://localhost:8080/posts', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      console.log('Server response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create post');
+      }
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to create post');
+      }
+
+      // Create blob URLs for the new post
+      const newPost = {
+        ...data.post,
+        thumbnail: data.post.thumbnail_data ? 
+          URL.createObjectURL(new Blob([data.post.thumbnail_data], { type: 'image/jpeg' })) : null,
+        video_url: data.post.video_data ? 
+          URL.createObjectURL(new Blob([data.post.video_data], { type: 'video/mp4' })) : null
       };
 
-      let response;
       if (isEditing) {
-        // Update existing content
-        console.log('Updating content with ID:', editingId);
-        // TODO: Replace with actual API call
-        // response = await fetch(`/api/content/${editingId}`, {
-        //   method: 'PUT',
-        //   headers: {
-        //     'Authorization': `Bearer ${localStorage.getItem('token')}`
-        //   },
-        //   body: formData
-        // });
-        response = await simulateApiCall();
-      } else {
-        // Create new content
-        console.log('Creating new content');
-        // TODO: Replace with actual API call
-        // response = await fetch('/api/content', {
-        //   method: 'POST',
-        //   headers: {
-        //     'Authorization': `Bearer ${localStorage.getItem('token')}`
-        //   },
-        //   body: formData
-        // });
-        response = await simulateApiCall();
-      }
-
-      // TODO: Uncomment when backend is ready
-      // if (!response.ok) {
-      //   throw new Error(`Failed to ${isEditing ? 'update' : 'add'} content`);
-      // }
-      // const data = await response.json();
-
-      // For now, use the simulated response
-      const data = response;
-
-      if (isEditing) {
-        // Update existing item
-        setContentItems(prev => prev.map(item => 
-          item.id === editingId ? { ...item, ...data } : item
+        // Update existing post
+        setCollectionPosts(posts => posts.map(post => 
+          post.id === editingId ? newPost : post
         ));
       } else {
-        // Add new item
-        setContentItems(prev => [...prev, data]);
+        // Add new post
+        setCollectionPosts(posts => [...posts, newPost]);
       }
 
-      // Reset form
+      // Reset form and modals
       setIsAddingNew(false);
       setIsEditing(false);
       setEditingId(null);
@@ -408,9 +511,13 @@ const AdminDashboard = () => {
       setPreviewImage(null);
       setPreviewVideo(null);
       setFailedUploads({ image: null, video: null });
+
+      // Show success message
+      setError(null);
     } catch (err) {
-      setError(`Failed to ${isEditing ? 'update' : 'add'} content: ${err.message}`);
-      console.error('Submit error:', err);
+      console.error('Error in handleSubmit:', err);
+      setError(`Failed to ${isEditing ? 'update' : 'add'} ${modalType}: ${err.message}`);
+      setUploadProgress({ image: 0, video: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -429,11 +536,11 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDeleteClick = (item) => {
+  const handleDeleteClick = (post) => {
     setDeleteConfirmation({
       show: true,
-      itemId: item.id,
-      itemTitle: item.title
+      itemId: post.id,
+      itemTitle: post.title
     });
   };
 
@@ -442,24 +549,21 @@ const AdminDashboard = () => {
       setIsLoading(true);
       setError(null);
 
-      // Call backend API to delete the content
-      const response = await fetch(`/api/content/${deleteConfirmation.itemId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
+      // Call backend API to delete the post
+        const response = await fetch(`http://localhost:8080/posts/${deleteConfirmation.itemId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to delete post');
         }
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete content from server');
-      }
-
-      // Only remove from state if backend deletion was successful
-      setContentItems(items => items.filter(item => item.id !== deleteConfirmation.itemId));
+      // Remove post from the collection
+      setCollectionPosts(posts => posts.filter(post => post.id !== deleteConfirmation.itemId));
       setDeleteConfirmation({ show: false, itemId: null, itemTitle: '' });
     } catch (err) {
-      setError('Failed to delete content: ' + err.message);
+      setError('Failed to delete post: ' + err.message);
       console.error('Delete error:', err);
     } finally {
       setIsLoading(false);
@@ -470,9 +574,43 @@ const AdminDashboard = () => {
     setDeleteConfirmation({ show: false, itemId: null, itemTitle: '' });
   };
 
-  const handlePostClick = (item) => {
-    navigate(`/post/${item.id}`);
+  const handlePostClick = async (collection) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Fetch posts for the selected collection
+      const response = await fetch(`http://localhost:8080/collections/${collection.id}/posts`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch posts');
+      }
+      
+      if (data.posts) {
+        setSelectedCollection(data.collection);
+        setCollectionPosts(data.posts);
+      }
+    } catch (err) {
+      console.error('Error loading collection posts:', err);
+      setError('Failed to load collection posts: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleBackToCollections = () => {
+    setSelectedCollection(null);
+    setCollectionPosts([]);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-2xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -481,16 +619,17 @@ const AdminDashboard = () => {
       {/* Header */}
       <header className="py-8 text-center">
         <h2 className="text-3xl md:text-3xl font-bold text-pink-400 mb-4">
-          Admin Dashboard
+          {selectedCollection ? `${selectedCollection.title} - Posts` : 'Admin Dashboard'}
         </h2>
-        <Button 
-          onClick={handleAddNew}
-          className="bg-green-600 hover:bg-green-700 text-white"
-          disabled={isLoading}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Content
-        </Button>
+        {selectedCollection ? (
+          <Button 
+            onClick={handleBackToCollections}
+            className="bg-blue-600 hover:bg-blue-700 text-white mr-2"
+            disabled={isLoading}
+          >
+            Back to Collections
+          </Button>
+        ) : null}
       </header>
 
       {/* Error Message */}
@@ -500,13 +639,104 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* Collection Posts View */}
+      {selectedCollection && (
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">{selectedCollection.title} - Posts</h2>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleAddNewPhoto}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Photos
+              </Button>
+              <Button
+                onClick={handleAddNewPost}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Post
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {collectionPosts.map((post) => (
+              <div key={post.id} className="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+                <div className="relative cursor-pointer group">
+                  <img
+                    src={getFullUrl(post.thumbnail_url)}
+                    alt={post.title}
+                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300 flex items-center justify-center">
+                    <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="text-xl font-bold mb-2">{post.title}</h3>
+                  <p className="text-gray-400 mb-4 line-clamp-2">{post.description}</p>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                      onClick={() => handleDeleteClick(post)}
+                      disabled={isLoading}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Collections Grid */}
+      {!selectedCollection && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4 md:px-8 lg:px-16">
+          {contentItems.map((item) => (
+            <div key={item.id} className="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+              <div 
+                className="relative cursor-pointer group"
+                onClick={() => handlePostClick(item)}
+              >
+                <img
+                  src={getFullUrl(item.thumbnail_url)}
+                  alt={item.title}
+                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300 flex items-center justify-center">
+                  <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </div>
+              </div>
+              <div className="p-4">
+                <div className={`inline-block px-2 py-1 rounded text-xs font-bold text-white ${getTierColor(item.tier)} mb-2`}>
+                  {item.tier}
+                </div>
+                <h3 className="text-xl font-bold mb-2 cursor-pointer hover:text-pink-500 transition-colors" onClick={() => handlePostClick(item)}>
+                  {item.title}
+                </h3>
+                <p className="text-gray-400 mb-4 line-clamp-2">{item.description}</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-pink-500">{item.price}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Add/Edit Content Modal */}
       {isAddingNew && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-gray-800 p-4 sm:p-6 rounded-lg w-full max-w-2xl mx-auto my-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl sm:text-2xl font-bold text-white">
-                {isEditing ? 'Edit Content' : 'Add New Content'}
+                {isEditing ? `Edit ${modalType === 'collection' ? 'Collection' : modalType === 'photo' ? 'Photo' : 'Post'}` : 
+                 `Add New ${modalType === 'collection' ? 'Collection' : modalType === 'photo' ? 'Photo' : 'Post'}`}
               </h3>
               <Button
                 type="button"
@@ -516,14 +746,30 @@ const AdminDashboard = () => {
                   setIsAddingNew(false);
                   setIsEditing(false);
                   setEditingId(null);
+                  setNewContent({
+                    title: '',
+                    description: '',
+                    price: '',
+                    imageFile: null,
+                    videoFile: null,
+                    tier: 'BASIC',
+                    type: 'Video',
+                    isCoverPage: false
+                  });
+                  setPreviewImage(null);
+                  setPreviewVideo(null);
+                  setUploadProgress({ image: 0, video: 0 });
+                  setFailedUploads({ image: null, video: null });
+                  setError(null);
                 }}
+                disabled={isLoading}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </Button>
             </div>
-            <form onSubmit={handleSubmitNew} className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
+            <form onSubmit={handleSubmit} className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Title</label>
@@ -537,18 +783,20 @@ const AdminDashboard = () => {
                     disabled={isLoading}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Price</label>
-                  <input
-                    type="text"
-                    name="price"
-                    value={newContent.price}
-                    onChange={handleNewContentChange}
-                    className="w-full px-3 py-2 bg-gray-700 rounded text-white focus:ring-2 focus:ring-pink-500 focus:outline-none"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
+                {modalType === 'collection' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Price</label>
+                    <input
+                      type="text"
+                      name="price"
+                      value={newContent.price}
+                      onChange={handleNewContentChange}
+                      className="w-full px-3 py-2 bg-gray-700 rounded text-white focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
@@ -561,61 +809,40 @@ const AdminDashboard = () => {
                   disabled={isLoading}
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Media Type</label>
-                  <div className="flex gap-4 p-2 bg-gray-700 rounded">
-                    <label className="flex items-center space-x-2 flex-1">
-                      <input
-                        type="radio"
-                        name="mediaType"
-                        value="image"
-                        checked={!newContent.videoFile}
-                        onChange={() => {
-                          setNewContent(prev => ({ ...prev, videoFile: null }));
-                          setPreviewVideo(null);
-                        }}
-                        className="form-radio text-pink-500"
-                        disabled={isLoading}
-                      />
-                      <span className="text-sm">Image</span>
-                    </label>
-                    <label className="flex items-center space-x-2 flex-1">
-                      <input
-                        type="radio"
-                        name="mediaType"
-                        value="video"
-                        checked={!!newContent.videoFile}
-                        onChange={() => {
-                          setNewContent(prev => ({ ...prev, imageFile: null }));
-                          setPreviewImage(null);
-                        }}
-                        className="form-radio text-pink-500"
-                        disabled={isLoading}
-                      />
-                      <span className="text-sm">Video</span>
-                    </label>
+              {modalType === 'collection' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Tier</label>
+                    <select
+                      name="tier"
+                      value={newContent.tier}
+                      onChange={handleNewContentChange}
+                      className="w-full px-3 py-2 bg-gray-700 rounded text-white focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                      required
+                      disabled={isLoading}
+                    >
+                      <option value="BASIC">Basic</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HARDCORE">Hardcore</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center space-x-2 p-2 bg-gray-700 rounded mt-6">
+                    <input
+                      type="checkbox"
+                      name="isCoverPage"
+                      checked={newContent.isCoverPage}
+                      onChange={(e) => setNewContent(prev => ({ ...prev, isCoverPage: e.target.checked }))}
+                      className="form-checkbox text-pink-500"
+                      disabled={isLoading}
+                    />
+                    <span className="text-sm font-medium text-gray-300">Set as Cover Page</span>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Tier</label>
-                  <select
-                    name="tier"
-                    value={newContent.tier}
-                    onChange={handleNewContentChange}
-                    className="w-full px-3 py-2 bg-gray-700 rounded text-white focus:ring-2 focus:ring-pink-500 focus:outline-none"
-                    required
-                    disabled={isLoading}
-                  >
-                    <option value="BASIC">Basic</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HARDCORE">Hardcore</option>
-                  </select>
-                </div>
-              </div>
-              {!newContent.videoFile && (
+              )}
+              {/* File Uploads - Show based on modalType */}
+              {modalType === 'collection' && (
                 <div className="border border-gray-700 rounded-lg p-4">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Thumbnail Image</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Collection Cover Image</label>
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-700 border-dashed rounded-md hover:border-pink-500 transition-colors">
                     <div className="space-y-1 text-center">
                       <Upload className="mx-auto h-12 w-12 text-gray-400" />
@@ -632,7 +859,7 @@ const AdminDashboard = () => {
                             accept="image/*"
                             className="sr-only"
                             onChange={(e) => handleFileChange(e, 'image')}
-                            required={!newContent.videoFile}
+                            required={!isEditing}
                             disabled={isLoading || isCompressing}
                           />
                         </label>
@@ -645,7 +872,7 @@ const AdminDashboard = () => {
                       Compressing image...
                     </div>
                   )}
-                  {uploadProgress.image > 0 && (
+                  {newContent.imageFile && uploadProgress.image > 0 && uploadProgress.image < 100 && (
                     <div className="mt-2">
                       <div className="w-full bg-gray-700 rounded-full h-2.5">
                         <div
@@ -680,92 +907,106 @@ const AdminDashboard = () => {
                   )}
                 </div>
               )}
-              {!newContent.imageFile && (
+              {modalType === 'post' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="border border-gray-700 rounded-lg p-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Thumbnail Image</label>
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-700 border-dashed rounded-md hover:border-pink-500 transition-colors">
+                      <div className="space-y-1 text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <div className="flex text-sm text-gray-400">
+                          <label
+                            htmlFor="post-image-upload"
+                            className="relative cursor-pointer bg-gray-700 rounded-md font-medium text-white hover:text-gray-300 focus-within:outline-none px-4 py-2"
+                          >
+                            <span>Upload an image</span>
+                            <input
+                              id="post-image-upload"
+                              name="imageFile"
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={(e) => handleFileChange(e, 'image')}
+                              disabled={isLoading || isCompressing}
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-gray-400">PNG, JPG, GIF up to 10MB</p>
+                      </div>
+                    </div>
+                    {previewImage && (
+                      <div className="mt-2">
+                        <img src={previewImage} alt="Preview" className="h-32 w-full object-cover rounded" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="border border-gray-700 rounded-lg p-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Video</label>
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-700 border-dashed rounded-md hover:border-pink-500 transition-colors">
+                      <div className="space-y-1 text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <div className="flex text-sm text-gray-400">
+                          <label
+                            htmlFor="post-video-upload"
+                            className="relative cursor-pointer bg-gray-700 rounded-md font-medium text-white hover:text-gray-300 focus-within:outline-none px-4 py-2"
+                          >
+                            <span>Upload a video</span>
+                            <input
+                              id="post-video-upload"
+                              name="videoFile"
+                              type="file"
+                              accept="video/*"
+                              className="sr-only"
+                              onChange={(e) => handleFileChange(e, 'video')}
+                              disabled={isLoading || isCompressing}
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-gray-400">MP4, WebM up to 100MB</p>
+                      </div>
+                    </div>
+                    {previewVideo && (
+                      <div className="mt-2">
+                        <video src={previewVideo} controls className="w-full rounded" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {modalType === 'photo' && (
                 <div className="border border-gray-700 rounded-lg p-4">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Video File</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Photo</label>
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-700 border-dashed rounded-md hover:border-pink-500 transition-colors">
                     <div className="space-y-1 text-center">
                       <Upload className="mx-auto h-12 w-12 text-gray-400" />
                       <div className="flex text-sm text-gray-400">
                         <label
-                          htmlFor="video-upload"
+                          htmlFor="photo-upload"
                           className="relative cursor-pointer bg-gray-700 rounded-md font-medium text-white hover:text-gray-300 focus-within:outline-none px-4 py-2"
                         >
-                          <span>Upload a video</span>
+                          <span>Upload a photo</span>
                           <input
-                            id="video-upload"
-                            name="videoFile"
+                            id="photo-upload"
+                            name="imageFile"
                             type="file"
-                            accept="video/*"
+                            accept="image/*"
                             className="sr-only"
-                            onChange={(e) => handleFileChange(e, 'video')}
-                            required={!newContent.imageFile}
+                            onChange={(e) => handleFileChange(e, 'image')}
+                            required={!isEditing}
                             disabled={isLoading || isCompressing}
                           />
                         </label>
                       </div>
-                      <p className="text-xs text-gray-400">MP4, WebM up to 100MB (larger files will be compressed)</p>
+                      <p className="text-xs text-gray-400">PNG, JPG, GIF up to 10MB</p>
                     </div>
                   </div>
-                  {isCompressing && (
+                  {previewImage && (
                     <div className="mt-2">
-                      <div className="w-full bg-gray-700 rounded-full h-2.5">
-                        <div
-                          className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                          style={{ width: `${compressionProgress}%` }}
-                        ></div>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Compressing video: {compressionProgress}%
-                      </p>
-                    </div>
-                  )}
-                  {uploadProgress.video > 0 && (
-                    <div className="mt-2">
-                      <div className="w-full bg-gray-700 rounded-full h-2.5">
-                        <div
-                          className="bg-green-600 h-2.5 rounded-full transition-all duration-300"
-                          style={{ width: `${uploadProgress.video}%` }}
-                        ></div>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Uploading video: {Math.round(uploadProgress.video)}%
-                      </p>
-                    </div>
-                  )}
-                  {failedUploads.video && (
-                    <div className="mt-2 flex items-center justify-between bg-red-900/50 p-2 rounded">
-                      <span className="text-sm text-red-300">Upload failed</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-                        onClick={() => handleRetry('video')}
-                        disabled={isLoading || isCompressing}
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Retry
-                      </Button>
-                    </div>
-                  )}
-                  {previewVideo && (
-                    <div className="mt-2">
-                      <video src={previewVideo} controls className="w-full rounded" />
+                      <img src={previewImage} alt="Preview" className="h-64 w-full object-cover rounded" />
                     </div>
                   )}
                 </div>
               )}
-              <div className="flex items-center space-x-2 p-2 bg-gray-700 rounded">
-                <input
-                  type="checkbox"
-                  name="isCoverPage"
-                  checked={newContent.isCoverPage}
-                  onChange={(e) => setNewContent(prev => ({ ...prev, isCoverPage: e.target.checked }))}
-                  className="form-checkbox text-pink-500"
-                  disabled={isLoading}
-                />
-                <span className="text-sm font-medium text-gray-300">Set as Cover Page</span>
-              </div>
               <div className="flex justify-end gap-2 mt-6">
                 <Button
                   type="button"
@@ -775,6 +1016,21 @@ const AdminDashboard = () => {
                     setIsAddingNew(false);
                     setIsEditing(false);
                     setEditingId(null);
+                    setNewContent({
+                      title: '',
+                      description: '',
+                      price: '',
+                      imageFile: null,
+                      videoFile: null,
+                      tier: 'BASIC',
+                      type: 'Video',
+                      isCoverPage: false
+                    });
+                    setPreviewImage(null);
+                    setPreviewVideo(null);
+                    setUploadProgress({ image: 0, video: 0 });
+                    setFailedUploads({ image: null, video: null });
+                    setError(null);
                   }}
                   disabled={isLoading}
                 >
@@ -783,9 +1039,14 @@ const AdminDashboard = () => {
                 <Button
                   type="submit"
                   className="bg-green-600 hover:bg-green-700 text-white"
-                  disabled={isLoading || isCompressing}
+                  disabled={isLoading || isCompressing || 
+                    (modalType === 'collection' && (!newContent.imageFile && !isEditing)) || 
+                    (modalType === 'post' && (!newContent.imageFile && !newContent.videoFile && !isEditing)) ||
+                    (modalType === 'photo' && (!newContent.imageFile && !isEditing))}
                 >
-                  {isLoading ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Update Content' : 'Add Content')}
+                  {isLoading ? (isEditing ? 'Updating...' : 'Adding...') : 
+                   (isEditing ? `Update ${modalType === 'collection' ? 'Collection' : modalType === 'photo' ? 'Photo' : 'Post'}` : 
+                    `Add ${modalType === 'collection' ? 'Collection' : modalType === 'photo' ? 'Photo' : 'Post'}`)}
                 </Button>
               </div>
             </form>
@@ -826,65 +1087,8 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
-
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4 md:px-8 lg:px-16">
-        {contentItems.map((item) => (
-          <div key={item.id} className="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-            <div 
-              className="relative cursor-pointer group"
-              onClick={() => handlePostClick(item)}
-            >
-              <img
-                src={item.imageUrl}
-                alt={item.title}
-                className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300 flex items-center justify-center">
-                <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-            </div>
-            <div className="p-4">
-              <div className={`inline-block px-2 py-1 rounded text-xs font-bold text-white ${getTierColor(item.tier)} mb-2`}>
-                {item.tier}
-              </div>
-              <h3 className="text-xl font-bold mb-2 cursor-pointer hover:text-pink-500 transition-colors" onClick={() => handlePostClick(item)}>
-                {item.title}
-              </h3>
-              <p className="text-gray-400 mb-4 line-clamp-2">{item.description}</p>
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-bold text-pink-500">{item.price}</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEdit(item);
-                    }}
-                    disabled={isLoading}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteClick(item);
-                    }}
-                    disabled={isLoading}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;

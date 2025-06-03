@@ -1,74 +1,126 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 
 const AdminLogin = () => {
-  const navigate = useNavigate();
-  const { login } = useUser();
   const [formData, setFormData] = useState({
     username: '',
-    password: ''
+    password: '',
   });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useUser();
+
+  useEffect(() => {
+    // Check if already logged in
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/checkauth', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        if (data.success && data.user?.isAdmin) {
+          navigate('/admin/dashboard');
+        }
+      } catch (err) {
+        console.log('Auth check failed:', err);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // This will be connected to backend later
-    // For now, we'll just simulate a successful admin login
-    login({
-      name: formData.username,
-      email: `${formData.username}@admin.com`,
-      isAdmin: true
-    });
-    navigate('/admin/dashboard');
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('Attempting admin login with:', formData);
+
+      // Attempt admin login
+      const response = await fetch('http://localhost:8080/adminLogin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+      console.log('Admin login response:', data);
+
+      if (!data.success) {
+        setError(data.message || 'Login failed');
+        setLoading(false);
+        return;
+      }
+
+      // Store admin session
+      login({
+        ...data.user,
+        isAdmin: true
+      });
+      
+      setLoading(false);
+      navigate('/admin/dashboard');
+    } catch (error) {
+      console.error('Admin login error:', error);
+      setError('An error occurred during login. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Admin Login</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-6 text-center text-white">Admin Login</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-gray-300 mb-2" htmlFor="username">
               Username
             </label>
             <input
+              className="w-full px-3 py-2 bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:border-blue-500"
               type="text"
               id="username"
               name="username"
               value={formData.username}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             />
           </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+          <div className="mb-6">
+            <label className="block text-gray-300 mb-2" htmlFor="password">
               Password
             </label>
             <input
+              className="w-full px-3 py-2 bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:border-blue-500"
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             />
           </div>
           <button
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-200"
             type="submit"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            disabled={loading}
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </button>
+          {error && (
+            <p className="mt-4 text-red-500 text-center">{error}</p>
+          )}
         </form>
       </div>
     </div>
