@@ -432,7 +432,7 @@ app.get('/collections', async (req, res) => {
       success: false,
       error: err.message 
     });
-    }
+  }
 });
 
 app.get('/collections/:id/posts', async (req, res) => {
