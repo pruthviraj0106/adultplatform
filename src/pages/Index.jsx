@@ -153,15 +153,10 @@ const Index = () => {
               className="bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer group"
               onClick={() => handleCollectionClick(collection)}
             >
-              <div className="relative">
-                <img
-                  src={collection.thumbnail_url}
-                  alt={collection.title}
-                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300 flex items-center justify-center">
-                  <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
+              <div className="relative w-full h-48 flex items-center justify-center bg-red-500">
+                {collection.type === 'VIDEOS' && (
+                  <Play className="w-12 h-12 text-white" />
+                )}
               </div>
               <div className="p-4">
                 <div className={`inline-block px-2 py-1 rounded text-xs font-bold text-white ${getTierColor(collection.tier)} mb-2`}>
