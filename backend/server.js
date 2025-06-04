@@ -416,8 +416,8 @@ const cleanUploadsFolder = async () => {
 };
 
 // Helper to write binary data to file and return URL
-const writeFileAndGetUrl = async (data, prefix, ext) => {
-    const backendUrl = 'https://adultplatform.onrender.com'; // Hardcoded backend URL
+const writeFileAndGetUrl = async (req, data, prefix, ext) => {
+    const backendUrl = `${req.protocol}://${req.get('host')}`; // DYNAMIC backend URL
     if (!data) {
         console.warn(`No data provided for ${prefix}, skipping file write.`);
         return null;
@@ -442,7 +442,9 @@ app.get('/collections', async (req, res) => {
     const collections = await Promise.all(result.rows.map(async (col) => {
       let thumbnailUrl = null;
       if (col.thumbnail_data) {
-        thumbnailUrl = await writeFileAndGetUrl(col.thumbnail_data, `collection-thumb-${col.id}`, 'jpg');
+        thumbnailUrl = await writeFileAndGetUrl(req, col.thumbnail_data, `collection-thumb-${col.id}`, 'jpg');
+      } else if (col.image_url) { // Fallback to image_url if thumbnail_data is null
+        thumbnailUrl = col.image_url; // Use the direct URL
       }
       return {
         ...col,
@@ -460,7 +462,7 @@ app.get('/collections', async (req, res) => {
       success: false,
       error: err.message 
     });
-  }
+    }
 });
 
 app.get('/collections/:id/posts', async (req, res) => {
@@ -487,10 +489,10 @@ app.get('/collections/:id/posts', async (req, res) => {
       let thumbnailUrl = null;
       let videoUrl = null;
       if (post.thumbnail_data) {
-        thumbnailUrl = await writeFileAndGetUrl(post.thumbnail_data, `post-thumb-${post.id}`, 'jpg');
+        thumbnailUrl = await writeFileAndGetUrl(req, post.thumbnail_data, `post-thumb-${post.id}`, 'jpg');
       }
       if (post.video_data) {
-        videoUrl = await writeFileAndGetUrl(post.video_data, `post-video-${post.id}`, 'mp4');
+        videoUrl = await writeFileAndGetUrl(req, post.video_data, `post-video-${post.id}`, 'mp4');
       }
       return {
         ...post,
@@ -501,7 +503,9 @@ app.get('/collections/:id/posts', async (req, res) => {
     // Write collection thumbnail as well
     let collectionThumbUrl = null;
     if (collectionCheck.rows[0].thumbnail_data) {
-      collectionThumbUrl = await writeFileAndGetUrl(collectionCheck.rows[0].thumbnail_data, `collection-thumb-${collectionCheck.rows[0].id}`, 'jpg');
+      collectionThumbUrl = await writeFileAndGetUrl(req, collectionCheck.rows[0].thumbnail_data, `collection-thumb-${collectionCheck.rows[0].id}`, 'jpg');
+    } else if (collectionCheck.rows[0].image_url) { // Also handle image_url for collection thumb here
+        collectionThumbUrl = collectionCheck.rows[0].image_url;
     }
     res.json({ 
       posts,
@@ -603,10 +607,10 @@ app.get('/posts', async (req, res) => {
       let thumbnailUrl = null;
       let videoUrl = null;
       if (post.thumbnail_data) {
-        thumbnailUrl = await writeFileAndGetUrl(post.thumbnail_data, `post-thumb-${post.id}`, 'jpg');
+        thumbnailUrl = await writeFileAndGetUrl(req, post.thumbnail_data, `post-thumb-${post.id}`, 'jpg');
       }
       if (post.video_data) {
-        videoUrl = await writeFileAndGetUrl(post.video_data, `post-video-${post.id}`, 'mp4');
+        videoUrl = await writeFileAndGetUrl(req, post.video_data, `post-video-${post.id}`, 'mp4');
       }
       return {
         ...post,
@@ -628,7 +632,7 @@ app.get('/images/:id', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Image not found' });
     }
-    const url = await writeFileAndGetUrl(result.rows[0].thumbnail_data, `image-${req.params.id}`, 'jpg');
+    const url = await writeFileAndGetUrl(req, result.rows[0].thumbnail_data, `image-${req.params.id}`, 'jpg');
     res.json({ url });
   } catch (err) {
     console.error('Error fetching image:', err);
@@ -643,7 +647,7 @@ app.get('/videos/:id', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Video not found' });
     }
-    const url = await writeFileAndGetUrl(result.rows[0].video_data, `video-${req.params.id}`, 'mp4');
+    const url = await writeFileAndGetUrl(req, result.rows[0].video_data, `video-${req.params.id}`, 'mp4');
     res.json({ url });
   } catch (err) {
     console.error('Error fetching video:', err);
