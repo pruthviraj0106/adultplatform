@@ -5,8 +5,6 @@ import Navigation from '../components/Navigation';
 import { Play, ArrowLeft, X } from 'lucide-react';
 import { useUser } from '../context/UserContext.jsx';
 
-const API_URL = 'http://localhost:8080';
-
 const VideoCollection = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -44,7 +42,7 @@ const VideoCollection = () => {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(`${API_URL}/collections/${id}/posts`);
+        const response = await fetch(`https://adultplatform.onrender.com/collections/${id}/posts`);
         const data = await response.json();
 
         if (!response.ok) {

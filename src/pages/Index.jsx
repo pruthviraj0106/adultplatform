@@ -6,7 +6,7 @@ import { useUser } from '../context/UserContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { Play } from 'lucide-react';
 
-const API_URL = 'http://localhost:8080'; // Changed to local backend URL
+const API_URL = 'https://adultplatform.onrender.com'; // Hardcoded API URL
 
 const Index = () => {
   const [collections, setCollections] = useState([]);
@@ -153,7 +153,7 @@ const Index = () => {
               className="bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer group"
               onClick={() => handleCollectionClick(collection)}
             >
-              <div className="relative w-full h-48 flex items-center justify-center bg-red-500 filter blur-sm">
+              <div className="relative w-full h-48 flex items-center justify-center bg-red-500">
                 {collection.type === 'VIDEOS' && (
                   <Play className="w-12 h-12 text-white" />
                 )}

@@ -703,7 +703,7 @@ const AdminDashboard = () => {
                 className="relative cursor-pointer group"
                 onClick={() => handlePostClick(item)}
               >
-                <div className="relative w-full h-48 flex items-center justify-center bg-red-500 filter blur-sm">
+                <div className="relative w-full h-48 flex items-center justify-center bg-red-500">
                   {(item.type === 'VIDEOS' || item.type === 'Video') && (
                     <Play className="w-12 h-12 text-white" />
                   )}
