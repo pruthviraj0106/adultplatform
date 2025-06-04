@@ -408,119 +408,116 @@ const AdminDashboard = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const formData = new FormData();
-
-    // Append common fields
-    formData.append('title', newContent.title);
-    formData.append('description', newContent.description);
-
-    if (modalType === 'collection') {
-      formData.append('price', newContent.price);
-      formData.append('tier', newContent.tier);
-      // formData.append('type', newContent.type); // Type for collections is typically implicit or Videos/Images
-      formData.append('isCoverPage', newContent.isCoverPage.toString());
-      if (newContent.imageFile) {
-        formData.append('thumbnail', newContent.imageFile);
-      }
-    } else if (modalType === 'post' || modalType === 'photo') {
-      if (!selectedCollection) {
-        setError('No collection selected for this post.');
-        setIsLoading(false);
-        return;
-      }
-      formData.append('collection_id', selectedCollection.id);
-      formData.append('type', newContent.type); // 'Video' or 'Image' for posts
-
-      if (newContent.imageFile) {
-        formData.append('image', newContent.imageFile); // 'image' for post thumbnail
-      }
-      if (newContent.videoFile && newContent.type === 'Video') {
-        formData.append('video', newContent.videoFile); // 'video' for post video
-      }
-       // Ensure description is not undefined
-      formData.append('description', newContent.description || '');
-    }
-
-
     try {
-      let url;
-      let method;
+      setIsLoading(true);
+      setError(null);
 
-      if (modalType === 'collection') {
-        url = editingId
-          ? `https://adultplatform.onrender.com/collections/${editingId}`
-          : 'https://adultplatform.onrender.com/collections';
-        method = editingId ? 'PUT' : 'POST';
-      } else if (modalType === 'post' || modalType === 'photo') {
-        url = editingId
-          ? `https://adultplatform.onrender.com/posts/${editingId}`
-          : 'https://adultplatform.onrender.com/posts';
-        method = editingId ? 'PUT' : 'POST';
-      } else {
-        throw new Error('Invalid modal type');
+      // Validate required fields
+      if (!newContent.title) {
+        throw new Error('Title is required');
+      }
+
+      if (modalType === 'post' || modalType === 'photo') {
+        if (!selectedCollection) {
+          throw new Error('No collection selected');
+        }
+        if (!newContent.imageFile) {
+          throw new Error('Thumbnail image is required');
+        }
+        if (modalType === 'post' && !newContent.videoFile) {
+          throw new Error('Video file is required for posts');
+        }
+      }
+
+      const formData = new FormData();
+      
+      if (modalType === 'post' || modalType === 'photo') {
+        formData.append('collection_id', selectedCollection.id);
       }
       
-      console.log('Submitting to URL:', url, 'with method:', method);
-      console.log('Form Data:', Object.fromEntries(formData.entries()));
+      formData.append('title', newContent.title);
+      formData.append('description', newContent.description || '');
+      formData.append('type', modalType === 'photo' ? 'Image' : newContent.type);
 
+      if (newContent.imageFile) {
+        formData.append('image', newContent.imageFile);
+      }
 
-      const response = await fetch(url, {
-        method: method,
-        body: formData,
-        // For FormData, browser sets Content-Type to multipart/form-data with boundary
-        // Do not set Content-Type header manually when using FormData with fetch
+      if (newContent.videoFile && (modalType === 'post' || newContent.type === 'Video')) {
+        formData.append('video', newContent.videoFile);
+      }
+
+      // Debug log
+      console.log('Submitting form data:', {
+        collection_id: selectedCollection?.id,
+        title: newContent.title,
+        description: newContent.description,
+        type: modalType === 'photo' ? 'Image' : newContent.type,
+        hasImage: !!newContent.imageFile,
+        hasVideo: !!newContent.videoFile,
+        modalType
       });
 
-      // Log raw response
-      const responseText = await response.text();
-      console.log('Raw response text:', responseText);
+      // Call backend API to create/update post
+      const response = await fetch('https://adultplatform.onrender.com/posts', {
+        method: 'POST',
+        body: formData
+      });
 
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('Failed to parse JSON response:', parseError);
-        setError(`Failed to process server response. Server said: ${responseText.substring(0, 200)}`);
-        setIsLoading(false);
-        return;
+      const data = await response.json();
+      console.log('Server response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create post');
       }
       
-
-      if (result.success) {
-        setIsAddingNew(false); // Close modal
-        setNewContent({ title: '', description: '', price: '', imageFile: null, videoFile: null, tier: 'BASIC', type: 'Video', isCoverPage: false });
-        setPreviewImage(null);
-        setPreviewVideo(null);
-        setEditingId(null); // Clear editing ID in all cases
-        setUploadProgress({ image: 0, video: 0 });
-        setCompressionProgress(0);
-        setFailedUploads({ image: null, video: null });
-
-        if (modalType === 'collection') {
-          // Re-fetch all collections if a collection was added/edited
-          // This assumes you have a function like fetchAllCollections that updates contentItems
-          // For now, a simple update (might have issues if backend doesn't return full URL)
-          const updatedCollection = result.collection; // Assuming backend sends 'collection'
-            if (editingId) {
-                setContentItems(prev => prev.map(c => c.id === editingId ? updatedCollection : c));
-            } else {
-                setContentItems(prev => [updatedCollection, ...prev]);
-            }
-          // To properly get URLs for collections, you'd ideally re-fetch them:
-          // await fetchAllCollections(); // Replace with your actual collection fetching function
-        } else if ((modalType === 'post' || modalType === 'photo') && selectedCollection) {
-          // If a post/photo was added/edited, re-fetch posts for the current collection
-          await handlePostClick(selectedCollection);
-        }
-      } else {
-        setError(result.message || 'Failed to save content.');
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to create post');
       }
+
+      // Create blob URLs for the new post
+      const newPost = {
+        ...data.post,
+        thumbnail: data.post.thumbnail_data ? 
+          URL.createObjectURL(new Blob([data.post.thumbnail_data], { type: 'image/jpeg' })) : null,
+        video_url: data.post.video_data ? 
+          URL.createObjectURL(new Blob([data.post.video_data], { type: 'video/mp4' })) : null
+      };
+
+      if (isEditing) {
+        // Update existing post
+        setCollectionPosts(posts => posts.map(post => 
+          post.id === editingId ? newPost : post
+        ));
+      } else {
+        // Add new post
+        setCollectionPosts(posts => [...posts, newPost]);
+      }
+
+      // Reset form and modals
+      setIsAddingNew(false);
+      setIsEditing(false);
+      setEditingId(null);
+      setNewContent({
+        title: '',
+        description: '',
+        price: '',
+        imageFile: null,
+        videoFile: null,
+        tier: 'BASIC',
+        type: 'Video',
+        isCoverPage: false
+      });
+      setPreviewImage(null);
+      setPreviewVideo(null);
+      setFailedUploads({ image: null, video: null });
+
+      // Show success message
+      setError(null);
     } catch (err) {
-      console.error('Error submitting content:', err);
-      setError('An error occurred: ' + err.message);
+      console.error('Error in handleSubmit:', err);
+      setError(`Failed to ${isEditing ? 'update' : 'add'} ${modalType}: ${err.message}`);
+      setUploadProgress({ image: 0, video: 0 });
     } finally {
       setIsLoading(false);
     }
