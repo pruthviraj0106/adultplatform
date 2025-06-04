@@ -56,7 +56,7 @@ const AdminDashboard = () => {
 
   const getFullUrl = (path) => {
     if (!path) return '';
-    return `http://localhost:8080${path}`;
+    return `https://adultplatform.onrender.com${path}`;
   };
 
   const loadFFmpeg = useCallback(async () => {
@@ -73,7 +73,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     // Check if user is admin
-    fetch('http://localhost:8080/checkauth', { credentials: 'include' })
+    fetch('https://adultplatform.onrender.com/checkauth', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (!data.success || !data.user?.isAdmin) {
@@ -94,7 +94,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchCollections = async () => {
       try {
-        const response = await fetch('http://localhost:8080/collections');
+        const response = await fetch('https://adultplatform.onrender.com/collections');
         const data = await response.json();
         if (data.collection) {
           // Use backend-provided thumbnail_url directly
@@ -459,7 +459,7 @@ const AdminDashboard = () => {
       });
 
       // Call backend API to create/update post
-      const response = await fetch('http://localhost:8080/posts', {
+      const response = await fetch('https://adultplatform.onrender.com/posts', {
         method: 'POST',
         body: formData
       });
@@ -550,7 +550,7 @@ const AdminDashboard = () => {
       setError(null);
 
       // Call backend API to delete the post
-        const response = await fetch(`http://localhost:8080/posts/${deleteConfirmation.itemId}`, {
+        const response = await fetch(`https://adultplatform.onrender.com/posts/${deleteConfirmation.itemId}`, {
             method: 'DELETE'
         });
 
@@ -580,7 +580,7 @@ const AdminDashboard = () => {
       setError(null);
       
       // Fetch posts for the selected collection
-      const response = await fetch(`http://localhost:8080/collections/${collection.id}/posts`);
+      const response = await fetch(`https://adultplatform.onrender.com/collections/${collection.id}/posts`);
       const data = await response.json();
       
       if (!response.ok) {
