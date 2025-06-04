@@ -11,7 +11,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 
 const dbHost = 'localhost';
 const dbPort = 5432;
@@ -36,7 +36,6 @@ const JWT_KEY = "great";
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, 'uploads');
-    // Create uploads directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -59,7 +58,9 @@ const upload = multer({
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://adultplatform-1.onrender.com'
+    'https://splendid-smakager-5467ad.netlify.app/',
+    'https://adultplatform-1.onrender.com', // Added deployed frontend URL
+    'https://adultplatform.onrender.com'   // Added deployed backend URL (self-reference for some cases)
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -389,22 +390,40 @@ app.get('/checkauth', async (req, res) => {
 
 // Utility to clean uploads folder
 const cleanUploadsFolder = async () => {
-  const uploadDir = path.join(__dirname, 'uploads');
-  if (fs.existsSync(uploadDir)) {
-    const files = await fs.promises.readdir(uploadDir);
-    for (const file of files) {
-      await fs.promises.unlink(path.join(uploadDir, file));
+    const directory = path.join(__dirname, 'uploads');
+    try {
+        const files = await fs.promises.readdir(directory);
+        for (const file of files) {
+            await fs.promises.unlink(path.join(directory, file));
+        }
+        console.log('Uploads folder cleaned.');
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            console.log('Uploads directory does not exist, skipping cleanup.');
+        } else {
+            console.error('Error cleaning uploads folder:', err);
+        }
     }
-  }
 };
 
 // Helper to write binary data to file and return URL
 const writeFileAndGetUrl = async (data, prefix, ext) => {
-  if (!data) return null;
-  const filename = `${prefix}-${Date.now()}${Math.floor(Math.random()*10000)}.${ext}`;
-  const filePath = path.join(__dirname, 'uploads', filename);
-  await fs.promises.writeFile(filePath, data);
-  return `/uploads/${filename}`;
+    const backendUrl = process.env.BACKEND_URL || `http://localhost:${PORT}`; // Fallback for local dev
+    if (!data) {
+        console.warn(`No data provided for ${prefix}, skipping file write.`);
+        return null;
+    }
+    const filename = `${prefix}-${Date.now()}.${ext}`;
+    const filePath = path.join(__dirname, 'uploads', filename);
+    try {
+        await fs.promises.writeFile(filePath, data);
+        const fileUrl = `${backendUrl}/uploads/${filename}`;
+        console.log(`File written to ${filePath}, URL: ${fileUrl}`);
+        return fileUrl;
+    } catch (error) {
+        console.error(`Error writing file ${filename}:`, error);
+        return null; 
+    }
 };
 
 app.get('/collections', async (req, res) => {
