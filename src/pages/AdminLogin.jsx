@@ -16,7 +16,7 @@ const AdminLogin = () => {
     // Check if already logged in
     const checkAuth = async () => {
       try {
-        const response = await fetch('http://localhost:8080/checkauth', {
+        const response = await fetch('https://adultplatform.onrender.com/checkauth', {
           credentials: 'include'
         });
         const data = await response.json();
@@ -45,7 +45,7 @@ const AdminLogin = () => {
       console.log('Attempting admin login with:', formData);
 
       // Attempt admin login
-      const response = await fetch('http://localhost:8080/adminLogin', {
+      const response = await fetch('https://adultplatform.onrender.com/adminLogin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
