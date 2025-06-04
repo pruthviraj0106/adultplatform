@@ -22,7 +22,7 @@ const dbName = 'finallastday'; // Replace with your PostgreSQL database name
 // Create a PostgreSQL connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // ssl: { rejectUnauthorized: false } // Uncomment if needed for SSL
+  ssl: { rejectUnauthorized: false } // Uncomment if needed for SSL
 });
 
 const sessionStore = new connectPgSimple({
