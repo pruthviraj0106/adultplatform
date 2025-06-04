@@ -59,7 +59,7 @@ const upload = multer({
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://kaleidoscopic-sfogliatella-2a887a.netlify.app/'
+    'https://splendid-smakager-5467ad.netlify.app/'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
