@@ -23,7 +23,7 @@ const Login = () => {
       setError(null);
       logout();
       
-      const res = await fetch("http://localhost:8080/login", {
+      const res = await fetch("https://adultplatform.onrender.com/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

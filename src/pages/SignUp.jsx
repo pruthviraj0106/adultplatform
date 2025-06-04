@@ -41,7 +41,7 @@ const SignUp = () => {
         password: formData.password
       });
 
-      const res = await fetch("http://localhost:8080/register", {
+      const res = await fetch("https://adultplatform.onrender.com/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
