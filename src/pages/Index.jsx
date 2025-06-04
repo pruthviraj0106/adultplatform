@@ -153,7 +153,7 @@ const Index = () => {
               className="bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer group"
               onClick={() => handleCollectionClick(collection)}
             >
-              <div className="relative w-full h-48 flex items-center justify-center bg-red-500">
+              <div className="relative w-full h-48 flex items-center justify-center bg-red-500 filter blur-sm">
                 {collection.type === 'VIDEOS' && (
                   <Play className="w-12 h-12 text-white" />
                 )}

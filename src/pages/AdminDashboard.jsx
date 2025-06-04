@@ -703,13 +703,10 @@ const AdminDashboard = () => {
                 className="relative cursor-pointer group"
                 onClick={() => handlePostClick(item)}
               >
-                <img
-                  src={getFullUrl(item.thumbnail_url)}
-                  alt={item.title}
-                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300 flex items-center justify-center">
-                  <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative w-full h-48 flex items-center justify-center bg-red-500 filter blur-sm">
+                  {(item.type === 'VIDEOS' || item.type === 'Video') && (
+                    <Play className="w-12 h-12 text-white" />
+                  )}
                 </div>
               </div>
               <div className="p-4">
