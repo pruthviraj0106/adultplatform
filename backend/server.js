@@ -11,6 +11,8 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
+app.set('trust proxy', 1); // Trust the first proxy
+
 const PORT = process.env.PORT || 8080;
 
 const dbHost = 'localhost';
@@ -75,7 +77,12 @@ app.use(session({
     secret: 'your-session-secret',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }
+    cookie: {
+        secure: true,     // Cookie will only be sent over HTTPS
+        httpOnly: true,   // Prevent client-side JS access
+        sameSite: 'none', // Allow cross-domain usage
+        maxAge: 3 * 60 * 60 * 1000 // 3 hours
+    }
 }));
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -170,7 +177,8 @@ app.post('/adminLogin', async (req, res) => {
 
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: false,
+                secure: true, // Ensure this is also secure if sent cross-domain
+                sameSite: 'none', // And SameSite=None
                 maxAge: 3 * 60 * 60 * 1000 // 3 hours
             });
 
@@ -294,7 +302,8 @@ app.post('/login', async (req, res) => {
 
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: false,
+                secure: true, // Ensure this is also secure if sent cross-domain
+                sameSite: 'none', // And SameSite=None
                 maxAge: 3 * 60 * 60 * 1000 // 3 hours
             });
 
