@@ -6,6 +6,8 @@ import { useUser } from '../context/UserContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { Play } from 'lucide-react';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080'; // Fallback for local if .env is missing
+
 const Index = () => {
   const [collections, setCollections] = useState([]);
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
@@ -44,9 +46,9 @@ const Index = () => {
         setError(null);
 
         const [collectionsRes, plansRes, authRes] = await Promise.all([
-          fetch('http://localhost:8080/collections'),
-          fetch('http://localhost:8080/subscriptionplans'),
-          fetch('http://localhost:8080/checkauth', { credentials: 'include' })
+          fetch(`${API_URL}/collections`),
+          fetch(`${API_URL}/subscriptionplans`),
+          fetch(`${API_URL}/checkauth`, { credentials: 'include' })
         ]);
 
         const collectionsData = await collectionsRes.json();

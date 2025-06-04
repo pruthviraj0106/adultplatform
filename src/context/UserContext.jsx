@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const UserContext = createContext();
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080'; // Fallback for local if .env is missing
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -10,7 +11,7 @@ export const UserProvider = ({ children }) => {
     // Check if user is already logged in
     const checkAuth = async () => {
       try {
-        const res = await fetch('http://localhost:8080/checkauth', {
+        const res = await fetch(`${API_URL}/checkauth`, {
           credentials: 'include'
         });
         const data = await res.json();
@@ -35,7 +36,7 @@ export const UserProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await fetch('http://localhost:8080/logout', { 
+      await fetch(`${API_URL}/logout`, { 
         credentials: 'include',
         method: 'GET'
       });
