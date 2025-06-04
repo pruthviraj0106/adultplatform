@@ -21,7 +21,7 @@ const dbName = 'finallastday'; // Replace with your PostgreSQL database name
 
 // Create a PostgreSQL connection pool
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: 'postgresql://postgres.qvgvewqxdwrffjugzajg:Pruthviraj%40577@aws-0-ap-south-1.pooler.supabase.com:6543/postgres',
   ssl: { rejectUnauthorized: false } // Uncomment if needed for SSL
 });
 
@@ -58,9 +58,9 @@ const upload = multer({
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://splendid-smakager-5467ad.netlify.app/',
+    
     'https://adultplatform-1.onrender.com', // Added deployed frontend URL
-    'https://adultplatform.onrender.com'   // Added deployed backend URL (self-reference for some cases)
+      // Added deployed backend URL (self-reference for some cases)
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -408,7 +408,7 @@ const cleanUploadsFolder = async () => {
 
 // Helper to write binary data to file and return URL
 const writeFileAndGetUrl = async (data, prefix, ext) => {
-    const backendUrl = process.env.BACKEND_URL || `http://localhost:${PORT}`; // Fallback for local dev
+    const backendUrl = 'https://adultplatform.onrender.com'; // Hardcoded backend URL
     if (!data) {
         console.warn(`No data provided for ${prefix}, skipping file write.`);
         return null;

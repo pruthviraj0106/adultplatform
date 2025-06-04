@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const UserContext = createContext();
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080'; // Fallback for local if .env is missing
+const API_URL = 'https://adultplatform.onrender.com'; // Hardcoded API URL
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);

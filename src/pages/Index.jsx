@@ -6,7 +6,7 @@ import { useUser } from '../context/UserContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { Play } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080'; // Fallback for local if .env is missing
+const API_URL = 'https://adultplatform.onrender.com'; // Hardcoded API URL
 
 const Index = () => {
   const [collections, setCollections] = useState([]);

@@ -36,18 +36,13 @@ const VideoCollection = () => {
     return getTierLevel(user.subscription_tier) >= getTierLevel(collectionTier);
   };
 
-  const getFullUrl = (path) => {
-    if (!path) return '';
-    return `http://localhost:8080${path}`;
-  };
-
   useEffect(() => {
     const fetchCollectionData = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(`http://localhost:8080/collections/${id}/posts`);
+        const response = await fetch(`https://adultplatform.onrender.com/collections/${id}/posts`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -154,7 +149,7 @@ const VideoCollection = () => {
             <div key={post.id} className="bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer group" onClick={() => handlePostClick(post)}>
               <div className="relative">
                 <img
-                  src={getFullUrl(post.thumbnail_url)}
+                  src={post.thumbnail_url}
                   alt={post.title}
                   className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                 />
@@ -183,14 +178,14 @@ const VideoCollection = () => {
             </button>
             {selectedPost.type === 'Video' ? (
               <video
-                src={getFullUrl(selectedPost.video_url)}
+                src={selectedPost.video_url}
                 controls
                 className="w-full rounded-lg"
                 autoPlay
               />
             ) : (
               <img
-                src={getFullUrl(selectedPost.thumbnail_url)}
+                src={selectedPost.thumbnail_url}
                 alt={selectedPost.title}
                 className="w-full rounded-lg"
               />

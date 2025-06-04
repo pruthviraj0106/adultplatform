@@ -1,5 +1,5 @@
 const config = {
-    API_URL: process.env.REACT_APP_API_URL || 'https://adultplatform.onrender.com'
+    API_URL: 'https://adultplatform.onrender.com' // Hardcoded API URL
   };
   
   export default config;
