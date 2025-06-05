@@ -49,7 +49,7 @@ const PayPalButton = ({ amount, planId }) => {
 
   return (
     // This div is where the PayPal button will be rendered by the SDK
-    <div ref={buttonContainerRef} style={{ width: '100%', minHeight: '40px' }}></div>
+    <div ref={buttonContainerRef} style={{ minHeight: '40px' }}></div>
   );
 };
 

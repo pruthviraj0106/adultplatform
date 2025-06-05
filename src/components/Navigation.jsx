@@ -41,8 +41,8 @@ const Navigation = () => {
               </Link>
             </>
           )}
+          <PayPalButton />
         </div>
-        <PayPalButton />
       </div>
     </nav>
   );
