@@ -174,31 +174,35 @@ const VideoCollection = () => {
 
       {/* Modal Video/Photo Viewer */}
       {showModal && selectedPost && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-4xl">
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-4xl mx-auto my-8">
             <button
               onClick={closeModal}
-              className="absolute -top-12 right-0 text-white hover:text-gray-300"
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 z-10"
             >
               <X className="w-8 h-8" />
             </button>
-            {selectedPost.type === 'Video' ? (
-              <video
-                src={selectedPost.video_url}
-                controls
-                className="w-full rounded-lg"
-                autoPlay
-              />
-            ) : (
-              <img
-                src={selectedPost.thumbnail_url}
-                alt={selectedPost.title}
-                className="w-full rounded-lg"
-              />
-            )}
-            <div className="mt-4 text-white">
-              <h2 className="text-2xl font-bold">{selectedPost.title}</h2>
-              <p className="text-gray-400 mt-2">{selectedPost.description}</p>
+            <div className="bg-gray-900 rounded-lg overflow-hidden">
+              {selectedPost.type === 'Video' ? (
+                <video
+                  src={selectedPost.video_url}
+                  controls
+                  className="w-full rounded-t-lg"
+                  autoPlay
+                />
+              ) : (
+                <div className="relative">
+                  <img
+                    src={selectedPost.thumbnail_url}
+                    alt={selectedPost.title}
+                    className="w-full h-auto max-h-[80vh] object-contain rounded-t-lg"
+                  />
+                </div>
+              )}
+              <div className="p-6 bg-gray-900">
+                <h2 className="text-2xl font-bold text-white mb-3">{selectedPost.title}</h2>
+                <p className="text-gray-300 text-lg">{selectedPost.description}</p>
+              </div>
             </div>
           </div>
         </div>
