@@ -1,15 +1,18 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../components/ui/button.tsx';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Check, Star } from 'lucide-react';
+import { ArrowLeft, Check, Star, X } from 'lucide-react';
 import { useUser } from '../context/UserContext.jsx';
-import PayPalButton from '../components/PayPalButton';
 
 const Billing = () => {
   const { user } = useUser();
   const userPlan = user?.subscription_tier || user?.subscription_status || null;
   const location = useLocation();
   const planRefs = useRef({});
+  const [showManualPaymentModal, setShowManualPaymentModal] = useState(false);
+  const [selectedPlanForPayment, setSelectedPlanForPayment] = useState(null);
+
+  const PAYPAL_ID = 'Shanash802@gmail.com';
 
   const billingPlans = [
     {
@@ -124,6 +127,16 @@ const Billing = () => {
     }
   }, [location.state]);
 
+  const handlePayNowClick = (plan) => {
+    setSelectedPlanForPayment(plan);
+    setShowManualPaymentModal(true);
+  };
+
+  const closeModal = () => {
+    setShowManualPaymentModal(false);
+    setSelectedPlanForPayment(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 text-white">
       {/* Navigation Bar */}
@@ -184,7 +197,6 @@ const Billing = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 max-w-6xl mx-auto">
           {billingPlans.map((plan) => {
             const isCurrent = userPlan && userPlan.toUpperCase() === plan.tier && (plan.type === 'Monthly' ? plan.period === '/month' : plan.period === 'One-Time');
-            const priceForPayPal = plan.price.replace('$', '');
 
             return (
               <div
@@ -236,15 +248,60 @@ const Billing = () => {
                     Your Plan
                   </Button>
                 ) : (
-                  <div className={`mt-auto w-full py-3 ${plan.highlighted ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-700 hover:bg-gray-600'} rounded-xl`}>
-                     <PayPalButton amount={priceForPayPal} planId={plan.id} />
-                  </div>
+                  <Button
+                      onClick={() => handlePayNowClick(plan)}
+                      className={`w-full py-3 text-white font-bold mt-auto rounded-xl text-lg transition-all duration-200 ${
+                          plan.highlighted ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-800'
+                      }`}
+                  >
+                      Pay Now
+                  </Button>
                 )}
               </div>
             );
           })}
         </div>
       </section>
+
+      {/* Manual Payment Modal */}
+      {showManualPaymentModal && selectedPlanForPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="relative bg-gray-800 p-6 sm:p-8 rounded-lg w-full max-w-lg mx-auto shadow-2xl">
+            <button
+              onClick={closeModal}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300"
+            >
+              <X className="w-8 h-8" />
+            </button>
+            <h2 className="text-3xl font-bold text-pink-500 mb-6 text-center">
+              Complete Your Payment
+            </h2>
+            <p className="text-gray-300 mb-4 text-center">
+              To subscribe to the <span className="font-bold text-white">{selectedPlanForPayment.name}</span> for <span className="font-bold text-white">{selectedPlanForPayment.price}</span>, please send the payment manually via PayPal.
+            </p>
+            <div className="bg-gray-700 p-4 rounded-lg mb-6 text-center">
+              <p className="text-lg text-gray-200 mb-2">Send payment to:</p>
+              <p className="text-xl font-bold text-green-400 break-words">{PAYPAL_ID}</p>
+            </div>
+            <p className="text-gray-400 text-sm mb-6 text-center">
+              <span className="font-bold text-white">Instructions:</span>
+              <br />1. Open your PayPal app on your phone or visit paypal.com.
+              <br />2. Choose "Send Money" or "Pay or Get Paid".
+              <br />3. Enter the PayPal ID: <span className="font-bold text-white">{PAYPAL_ID}</span>.
+              <br />4. Enter the exact amount: <span className="font-bold text-white">{selectedPlanForPayment.price} USD</span>.
+              <br />5. Select "Paying for an item or service" (if prompted).
+              <br />6. Complete the payment.
+              <br />7. Once payment is sent, please notify us via email or support with your PayPal transaction ID to activate your plan.
+            </p>
+            <Button
+              onClick={closeModal}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white text-lg py-3"
+            >
+              I have sent the payment
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* FAQ Section */}
       <section className="px-4 md:px-8 lg:px-16 pb-16">
