@@ -208,7 +208,7 @@ const Index = () => {
                   </li>
                 ))}
               </ul>
-              <Link to="/billing" className="w-full mt-auto">
+              <Link to="/billing" state={{ selectedPlanId: plan.id }} className="w-full mt-auto">
                 <Button className="w-full bg-green-600 hover:bg-green-800 text-white">
                   Subscribe Now
                 </Button>

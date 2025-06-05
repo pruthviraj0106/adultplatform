@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Button } from '../components/ui/button.tsx';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Check, Star } from 'lucide-react';
 import { useUser } from '../context/UserContext.jsx';
 import PayPalButton from '../components/PayPalButton';
@@ -8,6 +8,8 @@ import PayPalButton from '../components/PayPalButton';
 const Billing = () => {
   const { user } = useUser();
   const userPlan = user?.subscription_tier || user?.subscription_status || null;
+  const location = useLocation();
+  const planRefs = useRef({});
 
   const billingPlans = [
     {
@@ -112,6 +114,16 @@ const Billing = () => {
     }
   };
 
+  useEffect(() => {
+    if (location.state && location.state.selectedPlanId) {
+      const { selectedPlanId } = location.state;
+      const planElement = planRefs.current[selectedPlanId];
+      if (planElement) {
+        planElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [location.state]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 text-white">
       {/* Navigation Bar */}
@@ -175,59 +187,60 @@ const Billing = () => {
             const priceForPayPal = plan.price.replace('$', '');
 
             return (
-            <div
-              key={plan.id}
+              <div
+                key={plan.id}
+                ref={el => planRefs.current[plan.id] = el}
                 className={`relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 rounded-3xl p-10 shadow-2xl flex flex-col border-4 transition-all duration-300 hover:scale-105 ${
                   plan.highlighted ? 'ring-4 ring-purple-500' : ''
                 } ${isCurrent ? 'border-yellow-400 scale-105 shadow-yellow-400/30' : 'border-transparent'}`}
-            >
-              {plan.highlighted && (
+              >
+                {plan.highlighted && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
                     <span className="bg-purple-600 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                    MOST POPULAR
-                  </span>
-                </div>
-              )}
+                      MOST POPULAR
+                    </span>
+                  </div>
+                )}
                 {isCurrent && (
                   <div className="absolute top-4 right-4 flex items-center gap-2">
                     <Star className="w-6 h-6 text-yellow-300 animate-bounce" />
                     <span className="text-yellow-200 font-bold text-xs">Current Plan</span>
                   </div>
                 )}
-              <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white mb-4 mr-auto ${getTierColor(plan.tier)}`}>
+                <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white mb-4 mr-auto ${getTierColor(plan.tier)}`}>
                   {plan.tier} <span className="ml-2 text-xs font-normal text-gray-200">{plan.type}</span>
-              </div>
+                </div>
                 <h3 className="text-2xl font-extrabold text-purple-200 mb-2 tracking-tight">
-                {plan.name}
-              </h3>
-              <p className="text-gray-400 text-sm mb-6">
-                {plan.description}
-              </p>
-              <div className="mb-6">
+                  {plan.name}
+                </h3>
+                <p className="text-gray-400 text-sm mb-6">
+                  {plan.description}
+                </p>
+                <div className="mb-6">
                   <span className="text-4xl font-extrabold text-white drop-shadow-lg">{plan.price}</span>
                   <span className="text-gray-400 ml-2">{plan.period}</span>
-              </div>
-              <ul className="space-y-3 mb-8">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-center text-sm">
-                    <Check className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                    <span className="text-gray-300">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              {isCurrent ? (
-                <Button
-                  className={`w-full py-3 text-white font-bold mt-auto rounded-xl text-lg transition-all duration-200 bg-yellow-500 hover:bg-yellow-600 text-black`}
-                  disabled={true}
-                >
-                  Your Plan
-                </Button>
-              ) : (
-                <div className={`mt-auto w-full py-3 ${plan.highlighted ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-700 hover:bg-gray-600'} rounded-xl`}>
-                   <PayPalButton amount={priceForPayPal} planId={plan.id} />
                 </div>
-              )}
-            </div>
+                <ul className="space-y-3 mb-8">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-center text-sm">
+                      <Check className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
+                      <span className="text-gray-300">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                {isCurrent ? (
+                  <Button
+                    className={`w-full py-3 text-white font-bold mt-auto rounded-xl text-lg transition-all duration-200 bg-yellow-500 hover:bg-yellow-600 text-black`}
+                    disabled={true}
+                  >
+                    Your Plan
+                  </Button>
+                ) : (
+                  <div className={`mt-auto w-full py-3 ${plan.highlighted ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-700 hover:bg-gray-600'} rounded-xl`}>
+                     <PayPalButton amount={priceForPayPal} planId={plan.id} />
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
