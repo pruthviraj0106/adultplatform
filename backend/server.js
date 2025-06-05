@@ -53,34 +53,8 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage: storage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB limit
-    fieldSize: 100 * 1024 * 1024 // 100MB limit for fields
-  },
-  fileFilter: (req, file, cb) => {
-    // Accept images and videos
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only images and videos are allowed.'));
-    }
+    fileSize: 100 * 1024 * 1024 // 100MB limit
   }
-});
-
-// Add error handling middleware for multer
-app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        message: 'File too large. Maximum size is 100MB',
-        success: false
-      });
-    }
-    return res.status(400).json({
-      message: err.message,
-      success: false
-    });
-  }
-  next(err);
 });
 
 app.use(cors({
