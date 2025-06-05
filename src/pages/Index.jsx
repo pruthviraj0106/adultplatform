@@ -45,15 +45,18 @@ const Index = () => {
         setIsLoading(true);
         setError(null);
 
-        const [collectionsRes, plansRes, authRes] = await Promise.all([
-          fetch(`${API_URL}/collections`),
-          fetch(`${API_URL}/subscriptionplans`),
-          fetch(`${API_URL}/checkauth`, { credentials: 'include' })
-        ]);
-
+        console.log('Fetching collections from:', `${API_URL}/collections`);
+        const collectionsRes = await fetch(`${API_URL}/collections`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('Collections response status:', collectionsRes.status);
         const collectionsData = await collectionsRes.json();
-        const plansData = await plansRes.json();
-        const authData = await authRes.json();
+        console.log('Collections data:', collectionsData);
 
         if (!collectionsRes.ok) {
           throw new Error(collectionsData.message || 'Failed to fetch collections');
@@ -61,27 +64,47 @@ const Index = () => {
 
         setCollections(collectionsData.collection);
 
+        // Fetch subscription plans
+        console.log('Fetching subscription plans from:', `${API_URL}/subscriptionplans`);
+        const plansRes = await fetch(`${API_URL}/subscriptionplans`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        const plansData = await plansRes.json();
+        console.log('Plans data:', plansData);
+
         if (plansData.plans) {
           setSubscriptionPlans(plansData.plans);
         }
 
+        // Check authentication
+        console.log('Checking auth from:', `${API_URL}/checkauth`);
+        const authRes = await fetch(`${API_URL}/checkauth`, { 
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        const authData = await authRes.json();
+        console.log('Auth data:', authData);
+
         if (authData.success) {
-          // Set user data regardless of admin status
           login(authData.user);
         }
       } catch (err) {
+        console.error('Error details:', err);
         setError('Failed to load collections: ' + err.message);
-        console.error('Error fetching collections:', err);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-
-    // No cleanup needed for backend URLs
-    return () => {};
-  }, []); // Remove user?.subscription_tier dependency
+  }, []);
 
   const handleCollectionClick = (collection) => {
     navigate(`/collection/${collection.id}`);
