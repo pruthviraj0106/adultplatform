@@ -3,6 +3,7 @@ import { Button } from '../components/ui/button.tsx';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Check, Star } from 'lucide-react';
 import { useUser } from '../context/UserContext.jsx';
+import PayPalButton from '../components/PayPalButton';
 
 const Billing = () => {
   const { user } = useUser();
@@ -12,7 +13,7 @@ const Billing = () => {
     {
       id: 1,
       name: "Basic Plan (Monthly)",
-      price: "$9.99",
+      price: "9.99",
       period: "/month",
       description: "Perfect for getting started with our content",
       tier: "BASIC",
@@ -28,7 +29,7 @@ const Billing = () => {
     {
       id: 2,
       name: "Basic Plan (One-Time)",
-      price: "$24.99",
+      price: "24.99",
       period: "One-Time",
       description: "Lifetime access to Basic content",
       tier: "BASIC",
@@ -43,7 +44,7 @@ const Billing = () => {
     {
       id: 3,
       name: "Medium Plan (Monthly)",
-      price: "$19.99",
+      price: "19.99",
       period: "/month",
       description: "More content and features for enthusiasts",
       tier: "MEDIUM",
@@ -62,7 +63,7 @@ const Billing = () => {
     {
       id: 4,
       name: "Medium Plan (One-Time)",
-      price: "$49.99",
+      price: "49.99",
       period: "One-Time",
       description: "Lifetime access to Medium content",
       tier: "MEDIUM",
@@ -79,7 +80,7 @@ const Billing = () => {
     {
       id: 5,
       name: "Hardcore Plan (One-Time)",
-      price: "$79.99",
+      price: "79.99",
       period: "One-Time",
       description: "Ultimate experience with all premium features (lifetime)",
       tier: "HARDCORE",
@@ -171,6 +172,8 @@ const Billing = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 max-w-6xl mx-auto">
           {billingPlans.map((plan) => {
             const isCurrent = userPlan && userPlan.toUpperCase() === plan.tier && (plan.type === 'Monthly' ? plan.period === '/month' : plan.period === 'One-Time');
+            const priceForPayPal = plan.price.replace('$', '');
+
             return (
             <div
               key={plan.id}
@@ -212,18 +215,18 @@ const Billing = () => {
                   </li>
                 ))}
               </ul>
-              <Button 
-                  className={`w-full py-3 text-white font-bold mt-auto rounded-xl text-lg transition-all duration-200 ${
-                  plan.highlighted 
-                    ? 'bg-purple-600 hover:bg-purple-700' 
-                      : isCurrent
-                        ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                    : 'bg-gray-700 hover:bg-gray-600'
-                }`}
-                  disabled={isCurrent}
-              >
-                  {isCurrent ? 'Your Plan' : plan.highlighted ? 'Get Started' : 'Choose Plan'}
-              </Button>
+              {isCurrent ? (
+                <Button
+                  className={`w-full py-3 text-white font-bold mt-auto rounded-xl text-lg transition-all duration-200 bg-yellow-500 hover:bg-yellow-600 text-black`}
+                  disabled={true}
+                >
+                  Your Plan
+                </Button>
+              ) : (
+                <div className={`mt-auto w-full py-3 ${plan.highlighted ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-700 hover:bg-gray-600'} rounded-xl`}>
+                   <PayPalButton amount={priceForPayPal} planId={plan.id} />
+                </div>
+              )}
             </div>
             );
           })}

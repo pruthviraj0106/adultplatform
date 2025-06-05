@@ -1,32 +1,36 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
-const PayPalButton = () => {
+// Accept 'amount' and 'planId' as props
+const PayPalButton = ({ amount, planId }) => {
+  const buttonContainerRef = useRef(null);
+
   useEffect(() => {
-    // Check if window.paypal is available (means the SDK script has loaded)
-    if (window.paypal) {
+    // Ensure the button container exists and PayPal SDK is loaded
+    if (buttonContainerRef.current && window.paypal) {
+      // Clear any existing buttons to prevent re-rendering issues
+      // This is crucial if the component re-renders with new props
+      buttonContainerRef.current.innerHTML = '';
+
       window.paypal.Buttons({
-        // Set up the transaction
+        // Set up the transaction with the dynamic amount
         createOrder: function(data, actions) {
           return actions.order.create({
             purchase_units: [{
               amount: {
-                value: '10.00', // This is the amount the user will pay. You can change this.
-                               // For testing, keep it a reasonable amount.
-                currency_code: 'USD' // Change if your client prefers another currency
-              }
+                value: amount, // Use the amount passed as a prop
+                currency_code: 'USD' // Ensure this matches your PayPal account's currency
+              },
+              custom_id: planId // Pass the plan ID for your records
             }]
           });
         },
         // Finalize the transaction
         onApprove: function(data, actions) {
           return actions.order.capture().then(function(details) {
-            // This alert is for demonstration. In a real app, you'd send
-            // this payment confirmation to your backend.
             alert('Transaction completed by ' + details.payer.name.given_name + '!');
             console.log('Payment details:', details);
-            // Here, you would typically make an API call to your backend
-            // to record the successful payment and potentially unlock content
-            // or update user's subscription status.
+            // You would typically send 'details' to your backend here
+            // to verify and record the payment, and update the user's subscription.
             // Example: fetch('/api/record-payment', { method: 'POST', body: JSON.stringify(details) });
           });
         },
@@ -39,13 +43,13 @@ const PayPalButton = () => {
           console.error('PayPal button error', err);
           alert('An error occurred during payment. Please try again.');
         }
-      }).render('#paypal-button-container'); // Render the button into the div with this ID
+      }).render(buttonContainerRef.current); // Render into the specific ref
     }
-  }, []); // Empty dependency array means this effect runs once on mount
+  }, [amount, planId]); // Re-run effect if amount or planId changes
 
   return (
     // This div is where the PayPal button will be rendered by the SDK
-    <div id="paypal-button-container" style={{ minWidth: '150px', marginLeft: '10px' }}></div>
+    <div ref={buttonContainerRef} style={{ width: '100%', minHeight: '40px' }}></div>
   );
 };
 
