@@ -56,6 +56,10 @@ const AdminDashboard = () => {
 
   const getFullUrl = (path) => {
     if (!path) return '';
+    // Check if the path is already a full URL
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
     return `https://adultplatform.onrender.com${path}`;
   };
 
@@ -159,6 +163,7 @@ const AdminDashboard = () => {
     }
   };
 
+  
   const compressImage = async (file) => {
     const options = {
       maxSizeMB: 1,
