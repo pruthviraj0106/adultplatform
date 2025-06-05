@@ -56,7 +56,11 @@ const AdminDashboard = () => {
 
   const getFullUrl = (path) => {
     if (!path) return '';
-    return `https://adultplatform.onrender.com${path}`;
+    // If the path already starts with http, return as is
+    if (path.startsWith('http')) return path;
+    // If the path starts with a slash, remove it to avoid double slashes
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    return `https://adultplatform.onrender.com/${cleanPath}`;
   };
 
   const loadFFmpeg = useCallback(async () => {
