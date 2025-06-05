@@ -42,26 +42,39 @@ const VideoCollection = () => {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(`https://adultplatform.onrender.com/collections/${id}/posts`);
-        const data = await response.json();
+        console.log('Fetching collection data from:', `${API_URL}/collections/${id}/posts`);
+        const response = await fetch(`${API_URL}/collections/${id}/posts`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
 
+        console.log('Response status:', response.status);
         if (!response.ok) {
-          throw new Error(data.message || 'Failed to fetch collection data');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Collection data:', data);
+
+        if (!data.collection || !data.posts) {
+          throw new Error('Invalid response format from server');
         }
 
         setCollection(data.collection);
         setPosts(data.posts);
       } catch (err) {
-        setError('Failed to load collection: ' + err.message);
         console.error('Error fetching collection:', err);
+        setError('Failed to load collection: ' + (err.message || 'Unknown error occurred'));
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchCollectionData();
-
-    // No need to revoke object URLs since we use direct URLs now
   }, [id]);
 
   const handlePostClick = (post) => {

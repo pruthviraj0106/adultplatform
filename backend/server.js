@@ -58,10 +58,15 @@ const upload = multer({
 });
 
 app.use(cors({
-  origin: true, // Allow all origins during development
+  origin: [
+    'http://localhost:3000',
+    'https://adultplatform-1.onrender.com',
+    'https://adultplatform.onrender.com'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Access-Control-Allow-Origin']
 }));
 
 app.use(express.json())
