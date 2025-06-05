@@ -289,7 +289,7 @@ const Billing = () => {
               <br />2. Choose "Send Money" or "Pay or Get Paid".
               <br />3. Enter the PayPal ID: <span className="font-bold text-white">{PAYPAL_ID}</span>.
               <br />4. Enter the exact amount: <span className="font-bold text-white">{selectedPlanForPayment.price} USD</span>.
-              <br />5. Select "Paying for an item or service" (if prompted).
+              <br />5. Select <span className="font-bold text-white">"Send via family and friends"</span> (if prompted).
               <br />6. Complete the payment.
               <br />7. Once payment is sent, please notify us via email or support with your PayPal transaction ID to activate your plan.
             </p>
