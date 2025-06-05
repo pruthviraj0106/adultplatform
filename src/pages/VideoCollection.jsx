@@ -42,7 +42,13 @@ const VideoCollection = () => {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(`https://adultplatform.onrender.com/collections/${id}/posts`);
+        const response = await fetch(`https://adultplatform.onrender.com/collections/${id}/posts`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
         const data = await response.json();
 
         if (!response.ok) {

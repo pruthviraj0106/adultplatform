@@ -580,7 +580,13 @@ const AdminDashboard = () => {
       setError(null);
       
       // Fetch posts for the selected collection
-      const response = await fetch(`https://adultplatform.onrender.com/collections/${collection.id}/posts`);
+      const response = await fetch(`https://adultplatform.onrender.com/collections/${collection.id}/posts`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
       const data = await response.json();
       
       if (!response.ok) {
