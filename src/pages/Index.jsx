@@ -208,9 +208,11 @@ const Index = () => {
                   </li>
                 ))}
               </ul>
-              <Button className="w-full bg-green-600 hover:bg-green-800 text-white mt-auto">
-                {plan.period === 'Monthly' ? 'Subscribe Now' : 'Buy Now'}
-              </Button>
+              <Link to="/billing" className="w-full mt-auto">
+                <Button className="w-full bg-green-600 hover:bg-green-800 text-white">
+                  Subscribe Now
+                </Button>
+              </Link>
             </div>
           ))}
         </div>
