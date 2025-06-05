@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button.tsx';
 import { useUser } from '../context/UserContext';
+import PayPalButton from './PayPalButton';
 
 const Navigation = () => {
   const { user, logout } = useUser();
@@ -41,6 +42,7 @@ const Navigation = () => {
             </>
           )}
         </div>
+        <PayPalButton />
       </div>
     </nav>
   );
